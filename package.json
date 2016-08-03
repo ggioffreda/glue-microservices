@@ -1,0 +1,27 @@
+{
+  "name": "glue",
+  "version": "1.0.0",
+  "description": "Glue is a collection of microservices, for collecting, processing and deliver data.",
+  "main": "main.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [
+    "glue",
+    "microservice",
+    "event",
+    "collector",
+    "rest",
+    "api",
+    "http"
+  ],
+  "author": "Giovanni Gioffreda <giovanni.gioffreda@gmail.com>",
+  "license": "MIT",
+  "dependencies": {
+    "body-parser": "^1.15.2",
+    "cluster-master": "^0.2.1",
+    "express": "^4.14.0",
+    "node-uuid": "^1.4.7",
+    "rethinkdb": "^2.3.2"
+  }
+}
