@@ -54,6 +54,10 @@ Processor
 The processor initialise all the handlers. Each handler can subscribe to
  one or multiple topics through the message bus and take any action
  required.
+ 
+Shipped handlers: **logger**, **modica**. 
+
+TODOs:
 
 - [ ] Improve naming convention, it's not clear
 - [ ] Allow specifying what handlers to load through environment or 
