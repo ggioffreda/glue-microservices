@@ -34,8 +34,10 @@
     };
 
     const collector = spawner(nodejs, ['./collector/master.js']);
+    const processor = spawner(nodejs, ['./processor/master.js']);
 
     trackProcess(collector, 'collector');
+    trackProcess(processor, 'processor');
 
     try {
         process.on('SIGHUP', function () {});

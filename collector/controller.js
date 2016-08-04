@@ -1,7 +1,11 @@
 const r = require('rethinkdb'),
+    amqp = require('amqplib/callback_api'),
+    exchange = 'processor',
     uuid = require('node-uuid');
 
-var rconn = null;
+var rconn = null,
+    qconn = null,
+    qchannel = null;
 
 var _sameObject = function (a, b) {
     if (a === b) return true;
@@ -18,12 +22,22 @@ var _sameObject = function (a, b) {
     return same;
 };
 
+var _publishMessage = function (domain, type, action, document) {
+    qchannel.publish(
+        exchange,
+        [ 'collector', domain, type, action ].join('.'),
+        new Buffer(JSON.stringify(document)),
+        { persistent: true, content_type: 'application/json' }
+    );
+};
+
 var _upsertObject = function (res, database, table, document, update) {
     update = update || false;
 
-    r.db(database).table(table).insert(document, update ? { conflicts: "replace" } : {}).run(rconn, function (err) {
+    r.db(database).table(table).insert(document, update ? { conflict: 'replace' } : {}).run(rconn, function (err, data) {
         if (err) return res.status(404).json({ message: err.msg });
-        return update ? res.status(204).end('') : res.status(201).json({ id: document.id });
+        _publishMessage(database, table, data.inserted ? 'insert' : 'update', document);
+        return data.inserted ? res.status(201).json({ id: document.id }) : res.status(204).end('');
     });
 };
 
@@ -31,8 +45,11 @@ var putType = function (req, res) {
     const database = req.params.objectDomain,
         table = req.params.objectType;
 
-    var handleResponse = function (err) {
+    var handleResponse = function (err, skipMessage) {
         if (err) return res.status(404).json({ message: err.msg });
+        if (!skipMessage) {
+            _publishMessage(database, table, 'type', { domain: database, type: table });
+        }
         return res.status(204).end('');
     };
 
@@ -41,7 +58,7 @@ var putType = function (req, res) {
             if (tableList.indexOf(table) < 0) {
                 r.db(database).tableCreate(table).run(rconn, handleResponse);
             } else {
-                handleResponse(null);
+                handleResponse(null, true);
             }
         });
     };
@@ -58,31 +75,46 @@ var putType = function (req, res) {
 };
 
 var postObject = function (req, res) {
-    var document = req.body;
+    const domain = req.params.objectDomain,
+        type = req.params.objectType,
+        document = req.body;
+
     if (!document.id) {
         document.id = uuid.v4();
     }
 
-    _upsertObject(res, req.params.objectDomain, req.params.objectType, document);
+    _upsertObject(res, domain, type, document);
 };
 
 var putObject = function (req, res) {
-    var document = req.body;
+    const domain = req.params.objectDomain,
+        type = req.params.objectType,
+        document = req.body;
+
     document.id = req.params.objectId;
 
-    _upsertObject(res, req.params.objectDomain, req.params.objectType, document, { conflict: "replace" });
+    _upsertObject(res, domain, type, document, true);
 };
 
 var getObject = function (req, res) {
-    r.db(req.params.objectDomain).table(req.params.objectType).get(req.params.objectId).run(rconn, function (err, data) {
+    const domain = req.params.objectDomain,
+        type = req.params.objectType,
+        id = req.params.objectId;
+
+    r.db(domain).table(type).get(id).run(rconn, function (err, data) {
         if (err) return res.status(404).json(err);
         res.json(data);
     });
 };
 
 var deleteObject = function (req, res) {
-    r.db(req.params.objectDomain).table(req.params.objectType).get(req.params.objectId).delete().run(rconn, function (err, data) {
+    const domain = req.params.objectDomain,
+        type = req.params.objectType,
+        id = req.params.objectId;
+
+    r.db(domain).table(type).get(id).delete().run(rconn, function (err, data) {
         if (err) return res.status(404).json(err);
+        _publishMessage(domain, type, 'delete', { id: id });
         res.json(data);
     });
 };
@@ -90,18 +122,38 @@ var deleteObject = function (req, res) {
 exports.routes = function (express) {
     var collector = express.Router();
 
-    // connect and load the routes
-    r.connect({}, function(err, conn) {
+    // connect to the message queue first
+    amqp.connect('amqp://localhost', function(err, conn) {
         if (err) {
             process.exit(1);
         }
-        rconn = conn;
 
-        collector.put('/:objectDomain/:objectType', putType);
-        collector.post('/:objectDomain/:objectType', postObject);
-        collector.put('/:objectDomain/:objectType/:objectId', putObject);
-        collector.get('/:objectDomain/:objectType/:objectId', getObject);
-        collector.delete('/:objectDomain/:objectType/:objectId', deleteObject);
+        qconn = conn;
+
+        qconn.createChannel(function(err, ch) {
+            if (err) {
+                process.exit(1);
+            }
+
+            qchannel = ch;
+
+            ch.assertExchange(exchange, 'topic', { durable: true });
+
+            // connect to the data layer and then load the routes
+            r.connect({}, function(err, conn) {
+                if (err) {
+                    process.exit(1);
+                }
+
+                rconn = conn;
+
+                collector.put('/:objectDomain/:objectType', putType);
+                collector.post('/:objectDomain/:objectType', postObject);
+                collector.put('/:objectDomain/:objectType/:objectId', putObject);
+                collector.get('/:objectDomain/:objectType/:objectId', getObject);
+                collector.delete('/:objectDomain/:objectType/:objectId', deleteObject);
+            });
+        });
     });
 
     return collector;
