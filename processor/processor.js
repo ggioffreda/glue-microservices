@@ -2,8 +2,8 @@
 
 (function () {
     const amqp = require('amqplib/callback_api'),
-        exchange = 'processor',
-        fs = require('fs');;
+        exchange = 'message_bus',
+        fs = require('fs');
 
     amqp.connect('amqp://localhost', function(err, conn) {
         conn.createChannel(function(err, ch) {

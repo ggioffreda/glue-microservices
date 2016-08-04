@@ -1,6 +1,6 @@
 const r = require('rethinkdb'),
     amqp = require('amqplib/callback_api'),
-    exchange = 'processor',
+    exchange = 'message_bus',
     uuid = require('node-uuid');
 
 var rconn = null,
