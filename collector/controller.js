@@ -124,26 +124,18 @@ exports.routes = function (express) {
 
     // connect to the message queue first
     amqp.connect('amqp://localhost', function(err, conn) {
-        if (err) {
-            process.exit(1);
-        }
+        if (err) process.exit(1);
 
         qconn = conn;
-
         qconn.createChannel(function(err, ch) {
-            if (err) {
-                process.exit(1);
-            }
+            if (err) process.exit(1);
 
             qchannel = ch;
-
             ch.assertExchange(exchange, 'topic', { durable: true });
 
             // connect to the data layer and then load the routes
             r.connect({}, function(err, conn) {
-                if (err) {
-                    process.exit(1);
-                }
+                if (err) process.exit(1);
 
                 rconn = conn;
 
