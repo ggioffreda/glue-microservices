@@ -55,13 +55,28 @@ The processor initialise all the handlers. Each handler can subscribe to
  one or multiple topics through the message bus and take any action
  required.
  
-Shipped handlers: **logger**, **modica**. 
+Shipped handlers:
+
+- **logger** logs the messages sent through the exchange
+
+- **modica** sends SMS text through [Modica](http://www.modicagroup.com/)
+  (supports only the SOAP API for now)
+
+- **apn** sends notifications to Apple devices through 
+  [Apple Push Notification Service](https://developer.apple.com/notifications/)
+
+- **fcm** sends notifications using the 
+  [Firebase Cloud Messaging](https://firebase.google.com/docs/cloud-messaging/),
+  new branding of the well known 
+  [Google Cloud Messaging service](https://firebase.google.com/support/faq/#gcm-fcm)
 
 TODOs:
 
 - [ ] Improve naming convention, it's not clear
 - [ ] Allow specifying what handlers to load through environment or 
   configuration
+- [ ] Try and isolate the processes of the handler to lower the impact
+  of just one of them failing
 - [ ] Find a nice way of configuring handlers
 - [ ] Write some test
 - [ ] Write documentation inline and Markdown
