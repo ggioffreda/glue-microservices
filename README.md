@@ -77,6 +77,7 @@ TODOs:
   configuration
 - [ ] Try and isolate the processes of the handler to lower the impact
   of just one of them failing
+- [ ] Drop direct access to the data layer and use the message bus instead
 - [ ] Find a nice way of configuring handlers
 - [ ] Write some test
 - [ ] Write documentation inline and Markdown
