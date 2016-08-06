@@ -11,10 +11,12 @@
 
     messageBus.connectModule(function (err, messageBusChannel) {
         dataLayer.connectModule(function (err, dataLayer) {
-            var app = express();
+            const app = express(),
+                c = require('./data-gatherer/controller'),
+                controller = new c.DataGathererController(express, messageBusChannel, dataLayer);
 
             app.use(bodyParser.json());
-            app.use('/', require('./data-gatherer/controller').mount(express, messageBusChannel, dataLayer));
+            app.use('/', controller.getRouter());
 
             http.createServer(app).listen(process.env.GLUE_C_PORT || 9210);
         });
