@@ -33,7 +33,7 @@
         });
     };
 
-    const collector = spawner(nodejs, ['./collector/master.js']);
+    const collector = spawner(nodejs, ['./data-gatherer/master.js']);
     const processor = spawner(nodejs, ['./processor/master.js']);
 
     trackProcess(collector, 'collector');

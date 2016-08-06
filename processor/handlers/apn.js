@@ -80,7 +80,7 @@ exports.setUp = function (messageBus, dataLayer) {
             }
         }
 
-        channel.bindQueue(queue, exchange, 'collector.*._apn.insert');
+        channel.bindQueue(queue, exchange, '*.*._apn.inserted');
 
         channel.consume(queue, function (msg) {
             const data = JSON.parse(msg.content.toString()),

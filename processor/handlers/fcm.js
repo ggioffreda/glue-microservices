@@ -47,7 +47,7 @@ exports.setUp = function (messageBus, dataLayer) {
             }
         }
 
-        channel.bindQueue(queue, exchange, 'collector.*._fcm.insert');
+        channel.bindQueue(queue, exchange, '*.*._fcm.inserted');
 
         channel.consume(queue, function (msg) {
             const data = JSON.parse(msg.content.toString()),

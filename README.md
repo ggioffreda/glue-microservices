@@ -4,12 +4,13 @@ Glue
 Glue is (will be) a set of micro-services, for collecting, processing and
  delivering data. Aims to be fast and easy to scale.
 
-Collector
----------
+Data Gatherer
+-------------
 
-Only goal of the collector is being able to receive and store objects 
- through an HTTP REST API as fast as possible. It provides also methods 
- for retrieving and delete objects.
+Only goal of the data gatherer is being able to receive and store objects 
+ as fast as possible. It provides also methods for retrieving and deleting
+ objects. To communicate with the data gatherer you can use either the
+ REST API or the message bus (to be implemented).
 
 When new data is collected or deleted, messages are sent through the
  message bus for other components to consume. They are tagged with a topic
@@ -18,16 +19,16 @@ When new data is collected or deleted, messages are sent through the
 Main methods:
 
 - `POST /:objectDomain/:objectType` stores an object and sends a
-  message with topic *collector.{domain}.{type}.insert* or 
-  *collector.{domain}.{type}.update* depending if the object is new or if
-  it gets replaced. The content of the message is the JSON encoded object.
+  message with topic *data_gatherer.{domain}.{type}.inserted* or 
+  *data_gatherer.{domain}.{type}.updated* depending if the object is new or if
+  it gets updated. The content of the message is the JSON encoded object.
   Use this when you don't want to specify the ID of the object or if you
   want it returned in the response.
 
 - `PUT /:objectDomain/:objectType/:objectId` stores an object and sends a
-  message with topic *collector.{domain}.{type}.insert* or 
-  *collector.{domain}.{type}.update* depending if the object is new or if
-  it gets replaced. The content of the message is the JSON encoded object.
+  message with topic *data_gatherer.{domain}.{type}.inserted* or 
+  *data_gatherer.{domain}.{type}.updated* depending if the object is new or if
+  it gets updated. The content of the message is the JSON encoded object.
   Use this if you already know the object ID.
 
 Other methods:
@@ -35,11 +36,11 @@ Other methods:
 - `GET /:objectDomain/:objectType/:objectId` returns the requested object.
 
 - `DELETE /:objectDomain/:objectType/:objectId` deletes the specified object
-  and sends a message with topic *collector.{domain}.{type}.delete*. The 
+  and sends a message with topic *data_gatherer.{domain}.{type}.deleted*. The 
   message contains the ID of the deleted object, JSON encoded.
 
 - `PUT /:objectDomain/:objectType` prepare for a new domain and/or type and
-  sends a message with topic *collector.{domain}.{type}.type*. The message
+  sends a message with topic *data_gatherer.{domain}.{type}.type*. The message
   contains a JSON encoded object with two properties, domain and type.
 
 TODOs:
