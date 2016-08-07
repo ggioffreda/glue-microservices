@@ -4,7 +4,7 @@
   "description": "Glue is a collection of microservices, for collecting, processing and deliver data.",
   "main": "main.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "npm-run mocha --recursive test/"
   },
   "keywords": [
     "glue",
@@ -27,5 +27,9 @@
     "node-uuid": "^1.4.7",
     "rethinkdb": "^2.3.2",
     "soap": "^0.16.0"
+  },
+  "devDependencies": {
+    "mocha": "^3.0.1",
+    "sinon": "^1.17.5"
   }
 }
