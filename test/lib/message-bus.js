@@ -1,74 +1,37 @@
 const assert = require('assert'),
     sinon = require('sinon'),
-    mb = require('../../lib/message-bus'),
-    server = 'amqp://localhost',
-    exchange = 'test_bus',
-    defaultError = new Error('Fake error');
-
-function initialiseContext(failedConnection, failedChannel, failedChannelMethod) {
-    const amqpChannel = {
-            assertExchange: sinon.stub().returns(new Promise(function (resolve, reject) {
-                if (failedChannelMethod) reject(defaultError);
-                else resolve({});
-            })),
-            publish: sinon.stub()
-        },
-        amqpConnection = {
-            createChannel: sinon.stub().returns(new Promise(function (resolve, reject) {
-                if (failedChannel) reject(defaultError);
-                else resolve(amqpChannel);
-            }))
-        },
-        amqp = {
-            connect: sinon.stub().returns(new Promise(function (resolve, reject) {
-                if (failedConnection) reject(defaultError);
-                else resolve(amqpConnection);
-            }))
-        },
-        messageBus = new mb.MessageBus(server, exchange, amqp);
-
-    return {
-        amqpChannel: amqpChannel,
-        amqpConnection: amqpConnection,
-        amqp: amqp,
-        messageBus: messageBus
-    };
-}
-
+    initialiser = require('./message-bus-context');
 
 describe('MessageBusErrors', function () {
+    var context = initialiser.initialiseContext();
+
     describe('#connectionError', function () {
         it('connection error code is 1', function () {
-            assert.equal(1, mb.MessageBusErrors.connectionError);
+            assert.equal(1, context.mb.MessageBusErrors.connectionError);
         });
     });
 
     describe('#channelError', function () {
         it('channel error code is 2', function () {
-            assert.equal(2, mb.MessageBusErrors.channelError);
+            assert.equal(2, context.mb.MessageBusErrors.channelError);
         });
     });
 });
 
 describe('MessageBus', function () {
-    describe('#MessageBus()', function () {
-        const context = initialiseContext();
+    var context = null;
 
-        it('should store server and exchange parameters', function () {
-            assert.equal(server, context.messageBus._server);
-            assert.equal(exchange, context.messageBus._exchange);
-        });
+    before(function () {
+        context = initialiser.initialiseContext();
     });
 
     describe('#getServer(), #getExchange(), #getConnection()', function () {
-        const context = initialiseContext();
-
         it('should return the server URL', function () {
-            assert.equal(server, context.messageBus.getServer());
+            assert.equal(context.server, context.messageBus.getServer());
         });
 
         it('should return the exchange', function () {
-            assert.equal(exchange, context.messageBus.getExchange());
+            assert.equal(context.exchange, context.messageBus.getExchange());
         });
 
         it('should be null until a connection is established', function () {
@@ -77,19 +40,19 @@ describe('MessageBus', function () {
     });
 
     describe('#connectModule()', function () {
+        var channel = null;
+
+        before(function (done) {
+            context = initialiser.initialiseContext();
+            context.messageBus.connectModule(function (err, result) {
+                channel = result;
+                done();
+            })
+        });
+
         describe('when successful', function () {
-            const context = initialiseContext();
-            var channel = null;
-
-            before(function (done) {
-                context.messageBus.connectModule(function (err, result) {
-                    channel = result;
-                    done();
-                })
-            });
-
             it('should open a connection for the module', function () {
-                assert(context.amqp.connect.calledOnce);
+                assert(context.amqp.connect.called);
                 assert.equal(context.amqpConnection, context.messageBus.getConnection());
             });
 
@@ -106,11 +69,11 @@ describe('MessageBus', function () {
         });
 
         describe('when failing because the setup of the exchange fails', function () {
-            const context = initialiseContext(false, false, true);
-            var error = null;
-            var channel = null;
+            var error = null,
+                channel = null;
 
             before(function (done) {
+                context = initialiser.initialiseContext(false, false, true);
                 context.messageBus.connectModule(function (err, result) {
                     error = err;
                     channel = result;
@@ -137,11 +100,11 @@ describe('MessageBus', function () {
         });
 
         describe('when failing because the setup of the channel fails', function () {
-            const context = initialiseContext(false, true);
-            var error = null;
-            var channel = null;
+            var error = null,
+                channel = null;
 
             before(function (done) {
+                context = initialiser.initialiseContext(false, true);
                 context.messageBus.connectModule(function (err, result) {
                     error = err;
                     channel = result;
@@ -168,11 +131,11 @@ describe('MessageBus', function () {
 
 
         describe('when failing because the connection fails', function () {
-            const context = initialiseContext(true);
-            var error = null;
-            var channel = null;
+            var error = null,
+                channel = null;
 
             before(function (done) {
+                context = initialiser.initialiseContext(true);
                 context.messageBus.connectModule(function (err, result) {
                     error = err;
                     channel = result;
@@ -199,10 +162,11 @@ describe('MessageBus', function () {
 });
 
 describe('MessageBusChannel', function () {
-    const context = initialiseContext();
-    var channel = null;
+    var context = null,
+        channel = null;
 
     before(function (done) {
+        context = initialiser.initialiseContext();
         context.messageBus.connectModule(function (err, ch) {
             channel = ch;
             done();
@@ -233,7 +197,7 @@ describe('MessageBusChannel', function () {
         });
 
         it('should publish to the correct exchange', function () {
-            assert.equal(exchange, context.amqpChannel.publish.args[0][0]);
+            assert.equal(context.exchange, context.amqpChannel.publish.args[0][0]);
         });
 
         it('should publish with the given key', function () {

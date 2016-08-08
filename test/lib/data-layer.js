@@ -1,202 +1,167 @@
-const assert = require('assert'),
-    sinon = require('sinon'),
-    dl = require('../../lib/data-layer');
+const initialiser = require('./data-layer-context'),
+    assert = require('assert'),
+    sinon = require('sinon');
 
 describe('DataLayerErrors', function () {
+    var context = initialiser.initialiseContext();
+
     describe('#connectionError', function () {
         it('connection error code is 1', function () {
-            assert.equal(1, dl.DataLayerErrors.connectionError);
+            assert.equal(1, context.dl.DataLayerErrors.connectionError);
         });
     });
 });
 
 describe('DataLayer', function () {
-    // shared configuration
-    const defaultOptions = { checkIfPassed: true },
-        defaultError = new Error('Fake error'),
-        defaultConnection = { checkConnection: true },
+    var context = null;
 
-        // mocking of the RethinkDB driver
-        runMethod =  sinon.stub(),
-        runnable = { run: runMethod },
-        _get = {
-            run: runMethod,
-            'delete': sinon.stub().returns(runnable)
-        },
-        _table = {
-            'get': sinon.stub().returns(_get),
-            insert: sinon.stub().returns(runnable)
-        },
-        _db = {
-            tableList: sinon.stub().returns(runnable),
-            tableCreate: sinon.stub().returns(runnable),
-            table: sinon.stub().returns(_table)
-        },
-        rSuccess = {
-            _connection: defaultConnection,
-            connect: function (options, callback) {
-                assert.equal(options, defaultOptions);
-                callback(null, this._connection);
-            },
-            dbList: sinon.stub().returns(runnable),
-            dbCreate: sinon.stub().returns(runnable),
-            db: sinon.stub().returns(_db)
-        },
-        rFailure = {
-            _connection: null,
-            connect: function (options, callback) {
-                assert.equal(options, defaultOptions);
-                callback(defaultError, null);
-            }
-        },
-        dataLayerSuccess = new dl.DataLayer(defaultOptions, rSuccess),
-        dataLayerFailure = new dl.DataLayer(defaultOptions, rFailure),
-
-        // common test values
-        database = 'database_name',
-        table = 'table_name',
-        id = 'object_id',
-        document = { id: 'object_id' },
-        documentOptions = { optionsCheck: true },
-        callback = sinon.spy();
-
-    var runMethodCalls = runMethod.callCount;
+    beforeEach(function () {
+        context = initialiser.initialiseContext();
+    });
 
     describe('#connectModule()', function () {
         it('should call the module callback with error if a connection cannot be established', function () {
             var callback = sinon.spy();
-            dataLayerFailure.connectModule(callback);
+            context.dataLayerFailure.connectModule(callback);
             assert(callback.called);
-            assert(callback.calledWith(defaultError, null));
+            assert(callback.calledWith(context.defaultError, null));
         });
 
         it('should call the module callback passing the connection', function () {
             var callback = sinon.spy();
-            dataLayerSuccess.connectModule(callback);
+            context.dataLayerSuccess.connectModule(callback);
             assert(callback.called);
-            assert(callback.calledWith(null, dataLayerSuccess));
+            assert(callback.calledWith(null, context.dataLayerSuccess));
         });
     });
 
     describe('#query()', function () {
         it('should return the database query builder', function () {
-            assert.equal(rSuccess, dataLayerSuccess.query());
-            assert.equal(rFailure, dataLayerFailure.query());
+            assert.equal(context.rSuccess, context.dataLayerSuccess.query());
+            assert.equal(context.rFailure, context.dataLayerFailure.query());
         });
+    });
+
+    beforeEach(function () {
+        context = initialiser.initialiseContext();
+        context.dataLayerSuccess.connectModule(sinon.spy());
     });
 
     describe('#execute()', function () {
         it('should run the query on the data connection with the given callback', function () {
-            var query = { run: sinon.stub() };
-            var callback = sinon.spy();
-            dataLayerSuccess.execute(query, callback);
+            var query = { run: sinon.stub() },
+                callback = sinon.spy();
+
+            context.dataLayerSuccess.execute(query, callback);
+
             assert(query.run.called);
-            assert(query.run.calledWith(defaultConnection, callback));
+            assert(query.run.calledWith(context.defaultConnection, callback));
         });
     });
 
     describe('#dbList()', function () {
         it('should return the list of databases', function () {
-            runMethodCalls = runMethod.callCount;
-            dataLayerSuccess.dbList(callback);
+            var callback = sinon.spy();
 
-            assert(rSuccess.dbList.called);
-            assert(runMethod.called);
-            assert(runMethod.calledWith(defaultConnection, callback));
-            assert(runMethodCalls + 1, runMethod.callCount);
+            context.dataLayerSuccess.dbList(callback);
+
+            assert(context.rSuccess.dbList.called);
+            assert(context.runMethod.calledOnce);
+            assert(context.runMethod.calledWith(context.defaultConnection, callback));
         });
     });
 
     describe('#dbCreate()', function () {
         it('should create a databases', function () {
-            dataLayerSuccess.dbCreate(database, callback);
+            var callback = sinon.spy();
 
-            assert(rSuccess.dbCreate.called);
-            assert(rSuccess.dbCreate.calledWith(database));
-            assert(runMethod.called);
-            assert(runMethod.calledWith(defaultConnection, callback));
-            assert(runMethodCalls + 1, runMethod.callCount);
+            context.dataLayerSuccess.dbCreate(context.database, callback);
+
+            assert(context.rSuccess.dbCreate.called);
+            assert(context.rSuccess.dbCreate.calledWith(context.database));
+            assert(context.runMethod.calledOnce);
+            assert(context.runMethod.calledWith(context.defaultConnection, callback));
         });
     });
 
     describe('#tableList()', function () {
         it('should return the list of tables in a database', function () {
-            runMethodCalls = runMethod.callCount;
-            dataLayerSuccess.tableList(database, callback);
+            var callback = sinon.spy();
 
-            assert(rSuccess.db.called);
-            assert(rSuccess.db.calledWith(database));
-            assert(_db.tableList.called);
-            assert(runMethod.called);
-            assert(runMethod.calledWith(defaultConnection, callback));
-            assert(runMethodCalls + 1, runMethod.callCount);
+            context.dataLayerSuccess.tableList(context.database, callback);
+
+            assert(context.rSuccess.db.called);
+            assert(context.rSuccess.db.calledWith(context.database));
+            assert(context._db.tableList.calledOnce);
+            assert(context.runMethod.calledOnce);
+            assert(context.runMethod.calledWith(context.defaultConnection, callback));
         });
     });
 
     describe('#tableCreate()', function () {
         it('should create a new table in a database', function () {
-            runMethodCalls = runMethod.callCount;
-            dataLayerSuccess.tableCreate(database, table, callback);
+            var callback = sinon.spy();
 
-            assert(rSuccess.db.called);
-            assert(rSuccess.db.calledWith(database));
-            assert(_db.tableCreate.called);
-            assert(_db.tableCreate.calledWith(table));
-            assert(runMethod.called);
-            assert(runMethod.calledWith(defaultConnection, callback));
-            assert(runMethodCalls + 1, runMethod.callCount);
+            context.dataLayerSuccess.tableCreate(context.database, context.table, callback);
+
+            assert(context.rSuccess.db.called);
+            assert(context.rSuccess.db.calledWith(context.database));
+            assert(context._db.tableCreate.calledOnce);
+            assert(context._db.tableCreate.calledWith(context.table));
+            assert(context.runMethod.calledOnce);
+            assert(context.runMethod.calledWith(context.defaultConnection, callback));
         });
     });
 
     describe('#get()', function () {
         it('should get an object from a table in a database', function () {
-            runMethodCalls = runMethod.callCount;
-            dataLayerSuccess.get(database, table, id, callback);
+            var callback = sinon.spy();
 
-            assert(rSuccess.db.called);
-            assert(rSuccess.db.calledWith(database));
-            assert(_db.table.called);
-            assert(_db.table.calledWith(table));
-            assert(_table.get.called);
-            assert(_table.get.calledWith(id));
-            assert(runMethod.called);
-            assert(runMethod.calledWith(defaultConnection, callback));
-            assert(runMethodCalls + 1, runMethod.callCount);
+            context.dataLayerSuccess.get(context.database, context.table, context.id, callback);
+
+            assert(context.rSuccess.db.called);
+            assert(context.rSuccess.db.calledWith(context.database));
+            assert(context._db.table.calledOnce);
+            assert(context._db.table.calledWith(context.table));
+            assert(context._table.get.calledOnce);
+            assert(context._table.get.calledWith(context.id));
+            assert(context.runMethod.calledOnce);
+            assert(context.runMethod.calledWith(context.defaultConnection, callback));
         });
     });
 
     describe('#delete()', function () {
         it('should delete an object from a table in a database', function () {
-            runMethodCalls = runMethod.callCount;
-            dataLayerSuccess.delete(database, table, id, callback);
+            var callback = sinon.spy();
 
-            assert(rSuccess.db.called);
-            assert(rSuccess.db.calledWith(database));
-            assert(_db.table.called);
-            assert(_db.table.calledWith(table));
-            assert(_table.get.called);
-            assert(_table.get.calledWith(id));
-            assert(_get.delete.called);
-            assert(runMethod.called);
-            assert(runMethod.calledWith(defaultConnection, callback));
-            assert(runMethodCalls + 1, runMethod.callCount);
+            context.dataLayerSuccess.delete(context.database, context.table, context.id, callback);
+
+            assert(context.rSuccess.db.called);
+            assert(context.rSuccess.db.calledWith(context.database));
+            assert(context._db.table.calledOnce);
+            assert(context._db.table.calledWith(context.table));
+            assert(context._table.get.calledOnce);
+            assert(context._table.get.calledWith(context.id));
+            assert(context._get.delete.calledOnce);
+            assert(context.runMethod.calledOnce);
+            assert(context.runMethod.calledWith(context.defaultConnection, callback));
         });
     });
 
     describe('#insert()', function () {
         it('should delete an object from a table in a database', function () {
-            runMethodCalls = runMethod.callCount;
-            dataLayerSuccess.insert(database, table, document, documentOptions, callback);
+            var callback = sinon.spy();
 
-            assert(rSuccess.db.called);
-            assert(rSuccess.db.calledWith(database));
-            assert(_db.table.called);
-            assert(_db.table.calledWith(table));
-            assert(_table.insert.called);
-            assert(_table.insert.calledWith(document, documentOptions));
-            assert(runMethod.called);
-            assert(runMethod.calledWith(defaultConnection, callback));
-            assert(runMethodCalls + 1, runMethod.callCount);
-        });
+            context.dataLayerSuccess.insert(context.database, context.table, context.document, context.documentOptions, callback);
+
+            assert(context.rSuccess.db.called);
+            assert(context.rSuccess.db.calledWith(context.database));
+            assert(context._db.table.calledOnce);
+            assert(context._db.table.calledWith(context.table));
+            assert(context._table.insert.calledOnce);
+            assert(context._table.insert.calledWith(context.document, context.documentOptions));
+            assert(context.runMethod.calledOnce);
+            assert(context.runMethod.calledWith(context.defaultConnection, callback));
+       });
     });
 });
