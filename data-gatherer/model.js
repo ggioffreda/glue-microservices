@@ -1,5 +1,11 @@
 const uuid = require('node-uuid');
 
+/**
+ * High level access to the underlying database, kept as simple as possible.
+ *
+ * @param dataLayer
+ * @constructor
+ */
 function DataGathererModel(dataLayer) {
 
     /**
@@ -94,6 +100,13 @@ function DataGathererModel(dataLayer) {
         });
     };
 
+    /**
+     * Calculate the difference between two given objects
+     *
+     * @param a
+     * @param b
+     * @return Array
+     */
     this.diffObjects = function (a, b) {
         if (a === b) return {};
         if (!(a instanceof Object) || !(b instanceof Object)) throw new Error('Only objects can be compared');
@@ -115,6 +128,13 @@ function DataGathererModel(dataLayer) {
         return changes;
     }.bind(this);
 
+    /**
+     * Check if the given objects are equal, this is a deep check
+     *
+     * @param a
+     * @param b
+     * @return bool
+     */
     this.equalObjects = function (a, b) {
         if (a === b) return true;
         if (!(a instanceof Object) || !(b instanceof Object)) return false;

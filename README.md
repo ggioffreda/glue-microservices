@@ -48,8 +48,8 @@ Other methods:
 TODOs:
 
 - [x] Write some test
-- [ ] Write documentation inline and Markdown
-- [ ] Add Travis CI configuration
+- [x] Write documentation inline and Markdown
+- [x] Add Travis CI configuration
  
 Processor
 ---------
