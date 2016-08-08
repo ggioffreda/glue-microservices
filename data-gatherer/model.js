@@ -10,29 +10,24 @@ function DataGathererModel(dataLayer) {
      * @param callback
      */
     this.createType = function (domain, type, callback) {
-        var handleResponse = function (err, dbResponse) {
-            if (err) callback(err, null);
-            else callback(null, dbResponse);
-        };
-
         var typeCheck = function () {
             dataLayer.tableList(domain, function (err, tableList) {
-                if (err) return handleResponse(err, null);
+                if (err) return callback(err, null);
                 if (tableList.indexOf(type) < 0) {
                     dataLayer.tableCreate(domain, type, function (err, results) {
-                        handleResponse(null, { action: 'created' });
+                        callback(err, results ? { action: 'created' } : null);
                     });
                 } else {
-                    handleResponse(null, { action: 'none' });
+                    callback(null, { action: 'none' });
                 }
             });
         };
 
         dataLayer.dbList(function (err, dbList) {
-            if (err) return handleResponse(err, null);
+            if (err) return callback(err, null);
             if (dbList.indexOf(domain) < 0) {
                 dataLayer.dbCreate(domain, function (err, result) {
-                    if (err) return handleResponse(err, null);
+                    if (err) return callback(err, null);
                     typeCheck();
                 });
             } else {
@@ -52,11 +47,16 @@ function DataGathererModel(dataLayer) {
     this.storeObject = function (domain, type, document, callback) {
         if (!document.id) {
             document.id = uuid.v4();
+        } else {
+            document.id = '' + document.id;
         }
 
         dataLayer.insert(domain, type, document, { conflict: 'replace' }, function (err, dbResponse) {
             if (err) callback(err, null);
-            else callback(null, { action: dbResponse.inserted > 0 ? 'inserted' : 'updated'});
+            else callback(null, {
+                id: document.id,
+                action: dbResponse.inserted > 0 ? 'inserted' : (dbResponse.unchanged > 0 ? 'none' : 'updated')
+            });
         });
     };
 
@@ -69,8 +69,9 @@ function DataGathererModel(dataLayer) {
      * @param callback
      */
     this.getObject = function (domain, type, id, callback) {
-        dataLayer.get(domain, type, id, function (err, document) {
+        dataLayer.get(domain, type, '' + id, function (err, document) {
             if (err) callback(err, null);
+            else if (!document) callback(new Error('Not found'), null);
             else callback(null, document);
         });
     };
@@ -84,7 +85,7 @@ function DataGathererModel(dataLayer) {
      * @param callback
      */
     this.deleteObject = function (domain, type, id, callback) {
-        dataLayer.delete(domain, type, id, function (err, dbResponse) {
+        dataLayer.delete(domain, type, '' + id, function (err, dbResponse) {
             if (err) callback(err, null);
             else {
                 if (0 === dbResponse.deleted) callback(new Error('Object not found'), null);
@@ -98,6 +99,7 @@ function DataGathererModel(dataLayer) {
         if (!(a instanceof Object) || !(b instanceof Object)) throw new Error('Only objects can be compared');
         var aKeys = Object.keys(a);
         var bKeys = Object.keys(b);
+        var changes = [];
         aKeys.concat(bKeys).reduce(function (carry, key) {
             if (carry.indexOf(key) < 0) carry.push(key);
             return carry;
