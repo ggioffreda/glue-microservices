@@ -3,6 +3,8 @@ Glue
 
 Glue is (will be) a set of micro-services, for collecting, processing and
  delivering data. Aims to be fast and easy to scale.
+ 
+[![Build Status](https://travis-ci.org/ggioffreda/glue-microservices.svg?branch=master)](https://travis-ci.org/ggioffreda/glue-microservices)
 
 Data Gatherer
 -------------
