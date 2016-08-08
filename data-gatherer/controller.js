@@ -1,7 +1,6 @@
-const m = require('./model');
-
-function DataGathererController(express, messageBus, dataLayer) {
-    this._model = new m.DataGathererModel(dataLayer);
+function DataGathererController(express, model, messageBus) {
+    this._model = model;
+    this._router = null;
 
     this.putTypeAction = function (req, res) {
         const domain = req.params.objectDomain,
@@ -12,7 +11,7 @@ function DataGathererController(express, messageBus, dataLayer) {
                 return res.status(404).json({ message: err.message});
             } else {
                 if ('created' === data.action) {
-                    _publishMessage(domain, type, 'type', { domain: domain, type: type });
+                    _publishMessage(domain, type, 'type.created', { domain: domain, type: type });
                     return res.status(201).end('');
                 }
 
@@ -46,22 +45,24 @@ function DataGathererController(express, messageBus, dataLayer) {
         this._model.deleteObject(domain, type, id, function (err, data) {
             if (err) res.status(404).json({ message: err.message });
             else {
-                _publishMessage(domain, type, data.action, { id: id });
+                _publishMessage(domain, type, id + '.' + data.action, { id: id });
                 res.status(204).end('');
             }
         });
     }.bind(this);
 
     this.getRouter = function () {
-        const router = express.Router();
+        if (null === this._router) {
+            this._router = express.Router();
 
-        router.put('/:objectDomain/:objectType', this.putTypeAction);
-        router.post('/:objectDomain/:objectType', this.postObjectAction);
-        router.put('/:objectDomain/:objectType/:objectId', this.putObjectAction);
-        router.get('/:objectDomain/:objectType/:objectId', this.getObjectAction);
-        router.delete('/:objectDomain/:objectType/:objectId', this.deleteObjectAction);
+            this._router.put('/:objectDomain/:objectType', this.putTypeAction);
+            this._router.post('/:objectDomain/:objectType', this.postObjectAction);
+            this._router.put('/:objectDomain/:objectType/:objectId', this.putObjectAction);
+            this._router.get('/:objectDomain/:objectType/:objectId', this.getObjectAction);
+            this._router.delete('/:objectDomain/:objectType/:objectId', this.deleteObjectAction);
+        }
 
-        return router;
+        return this._router;
     };
 
     var _publishMessage = function (domain, type, action, document) {
@@ -75,9 +76,12 @@ function DataGathererController(express, messageBus, dataLayer) {
         model.storeObject(domain, type, document, function (err, data) {
             if (err) res.status(404).json({ message: err.msg });
             else {
-                _publishMessage(domain, type, data.action, document);
+                var id = data.id;
+                if ('none' !== data.action) {
+                    _publishMessage(domain, type, id + '.' + data.action, document);
+                }
                 if ('inserted' === data.action) {
-                    res.status(201).json({ id: document.id });
+                    res.status(201).json({ id: id });
                 } else {
                     res.status(204).end('');
                 }

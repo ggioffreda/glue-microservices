@@ -14,20 +14,20 @@ Only goal of the data gatherer is being able to receive and store objects
 
 When new data is collected or deleted, messages are sent through the
  message bus for other components to consume. They are tagged with a topic
- in the form of *{component}.{domain}.{type}.{description}*.
+ in the form of *{component}.{domain}.{type}.{id}.{description}*.
 
 Main methods:
 
 - `POST /:objectDomain/:objectType` stores an object and sends a
-  message with topic *data_gatherer.{domain}.{type}.inserted* or 
-  *data_gatherer.{domain}.{type}.updated* depending if the object is new or if
+  message with topic *data_gatherer.{domain}.{type}.{id}.inserted* or 
+  *data_gatherer.{domain}.{type}.{id}.updated* depending if the object is new or if
   it gets updated. The content of the message is the JSON encoded object.
   Use this when you don't want to specify the ID of the object or if you
   want it returned in the response.
 
 - `PUT /:objectDomain/:objectType/:objectId` stores an object and sends a
-  message with topic *data_gatherer.{domain}.{type}.inserted* or 
-  *data_gatherer.{domain}.{type}.updated* depending if the object is new or if
+  message with topic *data_gatherer.{domain}.{type}.{id}.inserted* or 
+  *data_gatherer.{domain}.{type}.{id}.updated* depending if the object is new or if
   it gets updated. The content of the message is the JSON encoded object.
   Use this if you already know the object ID.
 
@@ -36,16 +36,16 @@ Other methods:
 - `GET /:objectDomain/:objectType/:objectId` returns the requested object.
 
 - `DELETE /:objectDomain/:objectType/:objectId` deletes the specified object
-  and sends a message with topic *data_gatherer.{domain}.{type}.deleted*. The 
+  and sends a message with topic *data_gatherer.{domain}.{type}.{id}.deleted*. The 
   message contains the ID of the deleted object, JSON encoded.
 
 - `PUT /:objectDomain/:objectType` prepare for a new domain and/or type and
-  sends a message with topic *data_gatherer.{domain}.{type}.type*. The message
+  sends a message with topic *data_gatherer.{domain}.{type}.type.created*. The message
   contains a JSON encoded object with two properties, domain and type.
 
 TODOs:
 
-- [ ] Write some test
+- [x] Write some test
 - [ ] Write documentation inline and Markdown
 - [ ] Add Travis CI configuration
  
