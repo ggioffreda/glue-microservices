@@ -4,7 +4,7 @@
   "description": "Glue is a collection of microservices, for collecting, processing and deliver data.",
   "main": "main.js",
   "scripts": {
-    "test": "npm-run mocha --recursive test/"
+    "test": "node node_modules/.bin/mocha --recursive test/"
   },
   "keywords": [
     "glue",
