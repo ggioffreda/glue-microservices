@@ -10,7 +10,7 @@ exports.setUp = function (messageBus, dataLayer) {
             soap = require('soap'), fs = require('fs'),
             config = JSON.parse(fs.readFileSync('./config/processor.handlers.modica.json', 'utf8'));
 
-        channel.bindQueue(queue, exchange, '*.*._modica.inserted');
+        channel.bindQueue(queue, exchange, '*.*._modica.*.inserted');
 
         channel.consume(queue, function (msg) {
             const data = JSON.parse(msg.content.toString()),
