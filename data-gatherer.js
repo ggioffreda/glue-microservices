@@ -14,8 +14,9 @@
         dataLayer.connectModule(function (err, dataLayer) {
             if (err) throw err;
             const app = express(),
+                m = require('./data-gatherer/model'),
                 c = require('./data-gatherer/controller'),
-                controller = new c.DataGathererController(express, messageBusChannel, dataLayer);
+                controller = new c.DataGathererController(express, new m.DataGathererModel(dataLayer), messageBusChannel);
 
             app.use(bodyParser.json());
             app.use('/', controller.getRouter());
