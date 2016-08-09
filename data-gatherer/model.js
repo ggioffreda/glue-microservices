@@ -1,5 +1,3 @@
-const uuid = require('node-uuid');
-
 /**
  * High level access to the underlying database, kept as simple as possible.
  *
@@ -51,16 +49,14 @@ function DataGathererModel(dataLayer) {
      * @param callback
      */
     this.storeObject = function (domain, type, document, callback) {
-        if (!document.id) {
-            document.id = uuid.v4();
-        } else {
+        if (document.id) {
             document.id = '' + document.id;
         }
 
         dataLayer.insert(domain, type, document, { conflict: 'replace' }, function (err, dbResponse) {
             if (err) callback(err, null);
             else callback(null, {
-                id: document.id,
+                id: document.id || dbResponse.generated_keys[0],
                 action: dbResponse.inserted > 0 ? 'inserted' : (dbResponse.unchanged > 0 ? 'none' : 'updated')
             });
         });
