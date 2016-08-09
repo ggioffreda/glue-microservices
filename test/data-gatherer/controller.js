@@ -62,8 +62,8 @@ describe('DataGathererController', function () {
             this.slow(1000);
             request(app)
                 .put('/' + testDatabase + '/' + testTable)
-                .expect(201)
                 .end(function (err, res) {
+                    assert.equal(201, res.status);
                     assert.deepEqual({}, res.body);
                     assert(mockMBChannel.publish.calledOnce);
                     assert(mockMBChannel.publish.calledWith(
@@ -78,8 +78,8 @@ describe('DataGathererController', function () {
             if (missingDependencies) return this.skip();
             request(app)
                 .put('/' + testDatabase + '/' + testTable)
-                .expect(204)
                 .end(function (err, res) {
+                    assert.equal(204, res.status);
                     assert.deepEqual({}, res.body);
                     assert(mockMBChannel.publish.notCalled);
                     done(err);
@@ -101,8 +101,8 @@ describe('DataGathererController', function () {
                     .post('/' + testDatabase + '/' + testTable)
                     .send(document[1])
                     .expect('Content-type', /^application\/json/)
-                    .expect(201)
                     .end(function (err, res) {
+                        assert.equal(201, res.status);
                         assert(res.body.id);
                         if (document[1].id) {
                             assert.deepEqual({ id: document[1].id }, res.body);
@@ -124,8 +124,8 @@ describe('DataGathererController', function () {
                     request(app)
                         .post('/' + testDatabase + '/' + testTable)
                         .send(document[1])
-                        .expect(204)
                         .end(function (err, res) {
+                            assert.equal(204, res.status);
                             assert.deepEqual({}, res.body);
                             if (document[1].id) {
                                 assert.equal(
@@ -144,8 +144,8 @@ describe('DataGathererController', function () {
                     request(app)
                         .post('/' + testDatabase + '/' + testTable)
                         .send(document[1])
-                        .expect(204)
                         .end(function (err, res) {
+                            assert.equal(204, res.status);
                             assert.deepEqual({}, res.body);
                             assert(mockMBChannel.publish.notCalled);
                             done();
@@ -167,9 +167,8 @@ describe('DataGathererController', function () {
                 request(app)
                     .put('/' + testDatabase + '/' + testTable + '/' + document[1].id)
                     .send(document[1])
-                    .expect('Content-type', /^application\/json/)
-                    .expect(201)
                     .end(function (err, res) {
+                        assert.equal(201, res.status);
                         assert(res.body.id);
                         assert.deepEqual({ id: document[1].id }, res.body);
                         assert.equal(
@@ -187,8 +186,8 @@ describe('DataGathererController', function () {
                 request(app)
                     .put('/' + testDatabase + '/' + testTable + '/' + document[1].id)
                     .send(document[1])
-                    .expect(204)
                     .end(function (err, res) {
+                        assert.equal(204, res.status);
                         assert.deepEqual({}, res.body);
                         assert(mockMBChannel.publish.notCalled);
                         done(err);
@@ -201,8 +200,8 @@ describe('DataGathererController', function () {
                 request(app)
                     .put('/' + testDatabase + '/' + testTable + '/' + document[1].id)
                     .send(document[1])
-                    .expect(204)
                     .end(function (err, res) {
+                        assert.equal(204, res.status);
                         assert.deepEqual({}, res.body);
                         assert.equal(
                             [ 'data_gatherer', testDatabase, testTable, document[1].id, 'updated' ].join('.'),
@@ -216,6 +215,123 @@ describe('DataGathererController', function () {
         });
     });
 
+
+    describe('#patchObject()', function () {
+        it('should throw an error if the patch is malformed', function (done) {
+            if (missingDependencies) return this.skip();
+            var id = 'test-case-123456',
+                patch = { action: 'update', patch: { field5: 5, field6: true, field7: 'seven' } };
+            request(app)
+                .patch('/' + testDatabase + '/' + testTable + '/' + id)
+                .send(patch)
+                .end(function (err, res) {
+                    assert.equal(400, res.status);
+                    assert(res.body.message);
+                    done();
+                });
+        });
+
+        it('should throw an error if the patch contains no items', function (done) {
+            if (missingDependencies) return this.skip();
+            var id = 'test-case-123456',
+                patch = { items: [] };
+            request(app)
+                .patch('/' + testDatabase + '/' + testTable + '/' + id)
+                .send(patch)
+                .end(function (err, res) {
+                    assert.equal(400, res.status);
+                    assert(res.body.message);
+                    assert(res.body.message.match(/no items/i));
+                    done();
+                });
+        });
+
+        it('should do nothing if the patch does not cause any actual change', function (done) {
+            if (missingDependencies) return this.skip();
+            var id = 'test-case-123456',
+                patch = { items: [ { action: 'update', patch: { field5: 5, field6: true, field7: 'seven' } } ] };
+            request(app)
+                .patch('/' + testDatabase + '/' + testTable + '/' + id)
+                .send(patch)
+                .end(function (err, res) {
+                    assert.equal(204, res.status);
+                    assert.deepEqual({}, res.body);
+                    done();
+                });
+        });
+
+        it('should update the object if the patch contains actual changes', function (done) {
+            if (missingDependencies) return this.skip();
+            var id = 'test-case-123456',
+                patch = { items: [ { action: 'update', patch: { field5: { deep: 'deep', untouched: true } } } ] };
+            request(app)
+                .patch('/' + testDatabase + '/' + testTable + '/' + id)
+                .send(patch)
+                .end(function (err, res) {
+                    assert.equal(204, res.status);
+                    assert.deepEqual({}, res.body);
+                    done();
+                });
+        });
+
+        it('should be able and update nested properties of the document', function (done) {
+            if (missingDependencies) return this.skip();
+            var id = 'test-case-123456',
+                patch = { items: [ { action: 'update', patch: { field5: { deep: 'deeper' } } } ] };
+            request(app)
+                .patch('/' + testDatabase + '/' + testTable + '/' + id)
+                .send(patch)
+                .end(function (err, res) {
+                    assert.equal(204, res.status);
+                    assert.deepEqual({}, res.body);
+                    done();
+                });
+        });
+
+        it('should be able delete properties of the document', function (done) {
+            if (missingDependencies) return this.skip();
+            var id = 'test-case-123456',
+                patch = { items: [ { action: 'delete', patch: { field6: null } } ] };
+            request(app)
+                .patch('/' + testDatabase + '/' + testTable + '/' + id)
+                .send(patch)
+                .end(function (err, res) {
+                    assert.equal(204, res.status);
+                    assert.deepEqual({}, res.body);
+                    done();
+                });
+        });
+
+        it('should be able delete nested properties of the document', function (done) {
+            if (missingDependencies) return this.skip();
+            var id = 'test-case-123456',
+                patch = { items: [ { action: 'delete', patch: { field5: { deep: null } } } ] };
+            request(app)
+                .patch('/' + testDatabase + '/' + testTable + '/' + id)
+                .send(patch)
+                .end(function (err, res) {
+                    assert.equal(204, res.status);
+                    assert.deepEqual({}, res.body);
+                    done();
+                });
+        });
+
+        it('should return an error if the document does not exist', function (done) {
+            if (missingDependencies) return this.skip();
+            var id = 'invlid-id',
+                patch = { items: [ { action: 'irrelevant', patch: { field5: { deep: null } } } ] };
+            request(app)
+                .patch('/' + testDatabase + '/' + testTable + '/' + id)
+                .send(patch)
+                .end(function (err, res) {
+                    assert.equal(404, res.status);
+                    assert(res.body.message);
+                    done();
+                });
+        });
+    });
+
+    // this test relies on previous tests for post, put and patch actions, if this breaks check the above as well
     describe('#getObjectAction()', function () {
         const documents = [
             // from #postObjectAction() testing
@@ -223,7 +339,7 @@ describe('DataGathererController', function () {
             [ 'string ID', { id: 'test-case-123', field5: 5, field6: true, field7: 'seven', addedField: 'this is new' } ],
             // from #putObjectAction() testing
             [ 'numeric ID', { id: 123456, field3: 'three', field4: 4.0, addedField: 'this is new' } ],
-            [ 'string ID', { id: 'test-case-123456', field5: 5, field6: true, field7: 'seven', addedField: 'this is new' } ]
+            [ 'string ID', { id: 'test-case-123456', field5: { untouched: true }, field7: 'seven', addedField: 'this is new' } ]
         ];
 
         documents.forEach(function (document) {
@@ -233,9 +349,8 @@ describe('DataGathererController', function () {
                 if (missingDependencies) return this.skip();
                 request(app)
                     .get(url)
-                    .expect('Content-type', /^application\/json/)
-                    .expect(200)
                     .end(function (err, res) {
+                        assert.equal(200, res.status);
                         assert.deepEqual(document[1], res.body);
                         done(err);
                     });
@@ -246,9 +361,8 @@ describe('DataGathererController', function () {
             if (missingDependencies) return this.skip();
             request(app)
                 .get('/' + testDatabase + '/' + testTable + '/invalid-id')
-                .expect('Content-type', /^application\/json/)
-                .expect(404)
                 .end(function (err, res) {
+                    assert.equal(404, res.status);
                     assert(null !== res.body);
                     assert(null !== res.body.message);
                     assert(null !== res.body.message.match(/not found/i));
@@ -257,6 +371,7 @@ describe('DataGathererController', function () {
         });
     });
 
+    // this test relies on previous tests for post, put and patch actions, if this breaks check the above as well
     describe('#deleteObjectAction()', function () {
         const documents = [
             // from #postObjectAction() testing
@@ -274,8 +389,8 @@ describe('DataGathererController', function () {
                 if (missingDependencies) return this.skip();
                 request(app)
                     .delete(url)
-                    .expect(204)
                     .end(function (err, res) {
+                        assert.equal(204, res.status);
                         assert.deepEqual({}, res.body);
                         assert.equal(
                             [ 'data_gatherer', testDatabase, testTable, document[1].id, 'deleted' ].join('.'),
@@ -292,8 +407,8 @@ describe('DataGathererController', function () {
             if (missingDependencies) return this.skip();
             request(app)
                 .delete('/' + testDatabase + '/' + testTable + '/invalid-id')
-                .expect(404)
                 .end(function (err, res) {
+                    assert.equal(404, res.status);
                     assert(null !== res.body);
                     assert(null !== res.body.message);
                     assert(null !== res.body.message.match(/not found/i));

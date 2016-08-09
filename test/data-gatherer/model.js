@@ -90,10 +90,88 @@ describe('DataGathererModel', function () {
         });
     });
 
+    describe('#patchObject()', function () {
+        it('should throw an error if the patch is malformed', function (done) {
+            if (null !== connectionError) return this.skip();
+            var patch = {  action: 'update', patch: { field3: 3 } };
+            model.patchObject(testDatabase, testTable, 'test-case1', patch, function (err, o) {
+                assert(null !== err);
+                assert(null === o);
+                done();
+            });
+        });
+
+        it('should throw an error if the patch has no items', function (done) {
+            if (null !== connectionError) return this.skip();
+            var patch = { items: [] };
+            model.patchObject(testDatabase, testTable, 'test-case1', patch, function (err, o) {
+                assert(null !== err);
+                assert(null === o);
+                done();
+            });
+        });
+
+        it('should do nothing if the patch does not cause any actual change', function (done) {
+            if (null !== connectionError) return this.skip();
+            var patch = { items: [ { action: 'update', patch: { field3: 3 } } ] };
+            model.patchObject(testDatabase, testTable, 'test-case1', patch, function (err, o) {
+                assert.deepEqual({ action: 'none', id: 'test-case1' }, o);
+                done();
+            });
+        });
+
+        it('should update the object if the patch contains actual changes', function (done) {
+            if (null !== connectionError) return this.skip();
+            var patch = { items: [ { action: 'update', patch: { field3: { deep: 'deep' } } } ] };
+            model.patchObject(testDatabase, testTable, 'test-case1', patch, function (err, o) {
+                assert.deepEqual({ action: 'updated', id: 'test-case1' }, o);
+                done();
+            });
+        });
+
+        it('should be able and update nested properties of the document', function (done) {
+            if (null !== connectionError) return this.skip();
+            var patch = { items: [ { action: 'update', patch: { field3: { deep: 'deeper' }, fieldNew: 'NEW' } } ] };
+            model.patchObject(testDatabase, testTable, 'test-case1', patch, function (err, o) {
+                assert.deepEqual({ action: 'updated', id: 'test-case1' }, o);
+                done();
+            });
+        });
+
+        it('should be able delete properties of the document', function (done) {
+            if (null !== connectionError) return this.skip();
+            var patch = { items: [ { action: 'delete', patch: { field4: null } } ] };
+            model.patchObject(testDatabase, testTable, 'test-case1', patch, function (err, o) {
+                assert.deepEqual({ action: 'updated', id: 'test-case1' }, o);
+                done();
+            });
+        });
+
+        it('should be able delete nested properties of the document', function (done) {
+            if (null !== connectionError) return this.skip();
+            var patch = { items: [ { action: 'delete', patch: { field3: { deep: null } } } ] };
+            model.patchObject(testDatabase, testTable, 'test-case1', patch, function (err, o) {
+                assert.deepEqual({ action: 'updated', id: 'test-case1' }, o);
+                done();
+            });
+        });
+
+        it('should return an error if the document does not exist', function (done) {
+            if (null !== connectionError) return this.skip();
+            var patch = { items: [ { action: 'delete', patch: { field3: { deep: null } } } ] };
+            model.patchObject(testDatabase, testTable, 'not-valid-id', patch, function (err, o) {
+                assert(null !== err);
+                assert(null === o);
+                done();
+            });
+        });
+    });
+
+    // this test relies on previous tests for post, put and patch actions, if this breaks check the above as well
     describe('#getObject()', function () {
         it('should return an existing object', function (done) {
             if (null !== connectionError) return this.skip();
-            var object = { id: 'test-case1', field3: 3, field4: 'four' };
+            var object = { id: 'test-case1', field3: { }, fieldNew: 'NEW' };
             model.getObject(testDatabase, testTable, 'test-case1', function (err, o) {
                 assert.deepEqual(object, o);
                 done();
@@ -110,10 +188,30 @@ describe('DataGathererModel', function () {
         });
     });
 
+    // this test relies on previous tests for post, put and patch actions, if this breaks check the above as well
     describe('#deleteObject()', function () {
         it('should do nothing if the object does not exist', function (done) {
             if (null !== connectionError) return this.skip();
             model.deleteObject(testDatabase, testTable, 'test-case2', function (err, o) {
+                assert(null !== err);
+                assert(null === o);
+                done();
+            });
+        });
+
+        it('should delete the object if it does exist', function (done) {
+            if (null !== connectionError) return this.skip();
+            model.deleteObject(testDatabase, testTable, 'test-case1', function (err, o) {
+                assert(null === err);
+                assert(o);
+                assert.equal('deleted', o.action);
+                done();
+            });
+        });
+
+        it('should return an error if called again in the same object', function (done) {
+            if (null !== connectionError) return this.skip();
+            model.deleteObject(testDatabase, testTable, 'test-case1', function (err, o) {
                 assert(null !== err);
                 assert(null === o);
                 done();
