@@ -15,8 +15,13 @@
             if (err) throw err;
             const app = express(),
                 m = require('./data-gatherer/model'),
+                model = new m.DataGathererModel(dataLayer),
                 c = require('./data-gatherer/controller'),
-                controller = new c.DataGathererController(express, new m.DataGathererModel(dataLayer), messageBusChannel);
+                p = require('./data-gatherer/processor'),
+                controller = new c.DataGathererController(express, model, messageBusChannel),
+                processor = new p.DataGathererProcessor(model, messageBusChannel);
+
+            processor.subscribeHandlers();
 
             app.use(bodyParser.json());
             app.use('/', controller.getRouter());
