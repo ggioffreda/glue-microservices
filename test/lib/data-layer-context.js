@@ -1,11 +1,15 @@
-function initialiseContext(runMethod) {
-    const assert = require('assert'),
-        sinon = require('sinon'),
-        dl = require('../../lib/data-layer'),
-        defaultOptions = { checkIfPassed: true },
-        defaultError = new Error('Fake error'),
-        defaultConnection = { checkConnection: true };
+const r = require('rethinkdb'),
+    assert = require('assert'),
+    sinon = require('sinon'),
+    dl = require('../../lib/data-layer'),
+    dataLayerReal = new dl.DataLayer({}, r),
+    testDatabase = 'test__data_layer',
+    testTable = 'test__data_layer',
+    defaultOptions = { checkIfPassed: true },
+    defaultError = new Error('Fake error'),
+    defaultConnection = { checkConnection: true };
 
+function initialiseContext(runMethod) {
     runMethod = runMethod || sinon.stub();
 
     const runnable = { run: runMethod },
@@ -41,6 +45,9 @@ function initialiseContext(runMethod) {
         };
 
     return {
+        r: r,
+        testDatabase: testDatabase,
+        testTable: testTable,
         dl: dl,
         defaultOptions: defaultOptions,
         defaultError: defaultError,
@@ -56,6 +63,7 @@ function initialiseContext(runMethod) {
         rFailure: rFailure,
         dataLayerSuccess: new dl.DataLayer(defaultOptions, rSuccess),
         dataLayerFailure: new dl.DataLayer(defaultOptions, rFailure),
+        dataLayerReal: dataLayerReal,
 
         // common test values
         database: 'database_name',
