@@ -271,4 +271,11 @@ describe('DataLayer', function () {
             });
         });
     });
+
+    after(function (done) {
+        if (connectionError) return done();
+        context.dataLayerReal.execute(context.dataLayerReal.query().dbDrop(context.testDatabase), function (err, o) {
+            done();
+        });
+    });
 });
