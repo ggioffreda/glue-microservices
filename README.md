@@ -95,6 +95,11 @@ The response will be a JSON encoded object mirroring the parameters used for
 
 - `results`: an array of matching objects.
 
+TODOs:
+
+- [ ] Write some tests
+- [ ] Write documentation inline
+
 Processor
 ---------
 
