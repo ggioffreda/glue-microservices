@@ -12,6 +12,18 @@ describe('DataLayerErrors', function () {
             assert.equal(1, context.dl.DataLayerErrors.connectionError);
         });
     });
+
+    describe('#connectionDrop', function () {
+        it('connection error code is 2', function () {
+            assert.equal(2, context.dl.DataLayerErrors.connectionDrop);
+        });
+    });
+
+    describe('#connectionTimeout', function () {
+        it('connection error code is 3', function () {
+            assert.equal(3, context.dl.DataLayerErrors.connectionTimeout);
+        });
+    });
 });
 
 describe('DataLayer', function () {
@@ -269,6 +281,27 @@ describe('DataLayer', function () {
                 assert.equal(1, o.deleted);
                 done();
             });
+        });
+    });
+
+    describe('#monitorConnection()', function () {
+        if (connectionError) { return this.skip(); }
+        it('should call the error handler if the connection is closed', function (done) {
+            context.dataLayerReal.getConnection().removeAllListeners('close');
+            context.dataLayerReal.monitorConnection(done);
+            context.dataLayerReal.getConnection().emit('close');
+        });
+
+        it('should call the error handler if the connection throw an error', function (done) {
+            context.dataLayerReal.getConnection().removeAllListeners('error');
+            context.dataLayerReal.monitorConnection(done);
+            context.dataLayerReal.getConnection().emit('error');
+        });
+
+        it('should call the error handler if the connection times out', function (done) {
+            context.dataLayerReal.getConnection().removeAllListeners('timeout');
+            context.dataLayerReal.monitorConnection(done);
+            context.dataLayerReal.getConnection().emit('timeout');
         });
     });
 
