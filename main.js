@@ -34,9 +34,11 @@
     };
 
     const collector = spawner(nodejs, ['./data-gatherer/master.js']);
+    const discoverer = spawner(nodejs, ['./data-discoverer/master.js']);
     const processor = spawner(nodejs, ['./processor/master.js']);
 
     trackProcess(collector, 'collector');
+    trackProcess(discoverer, 'discoverer');
     trackProcess(processor, 'processor');
 
     try {
