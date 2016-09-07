@@ -23,15 +23,21 @@ Main methods:
 - `POST /:objectDomain/:objectType` stores an object and sends a
   message with topic *data_gatherer.{domain}.{type}.{id}.inserted* or 
   *data_gatherer.{domain}.{type}.{id}.updated* depending if the object is new or if
-  it gets updated. The content of the message is the JSON encoded object.
-  Use this when you don't want to specify the ID of the object or if you
-  want it returned in the response.
+  it gets updated. The content of the message is the JSON encoded object. The 
+  content of the message is the JSON encoded object. Use this when you don't 
+  want to specify the ID of the object or if you want it returned in the response.
 
 - `PUT /:objectDomain/:objectType/:objectId` stores an object and sends a
   message with topic *data_gatherer.{domain}.{type}.{id}.inserted* or 
   *data_gatherer.{domain}.{type}.{id}.updated* depending if the object is new or if
-  it gets updated. The content of the message is the JSON encoded object.
-  Use this if you already know the object ID.
+  it gets updated. No message is sent if no change is made. The content of 
+  the message is the JSON encoded object. Use this if you already know the object ID.
+
+- `PATCH /:objectDomain/:objectType/:objectId` patches an object and sends
+  a message with topic *data_gatherer.{domain}.{type}.{id}.inserted* or 
+  *data_gatherer.{domain}.{type}.{id}.updated*. No message is sent if no change is 
+  made. This endpoint accept a list of actions to be executed on the requested
+  object, for more information see *DataGathererModel.patchObject*.
 
 Other methods:
 
