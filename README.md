@@ -56,7 +56,45 @@ TODOs:
 - [x] Write some test
 - [x] Write documentation inline and Markdown
 - [x] Add Travis CI configuration
+
+Data Discoverer
+---------------
+
+Only goal of the data discoverer is find gathered objects. You can pass a filter,
+ limit the results and order the results using any field. If you order by a field
+ that's not indexed yet, a new index will be created on the spot and therefore
+ the first call might be slightly slower than expected.
+
+The endpoint accept either `GET` and `POST` requests and the parameters can be
+ passed through query string or request body using `application/json` content
+ type. The latter is to be preferred because it allows you to use the correct
+ data type for the values of the filter, while each value in the query string
+ will be evaluated as string. Also it's easier to filter by nested properties.
+
+The only endpoint is `GET|POST /:objectDomain/:objectType`.
+
+Accepted parameters are:
+
+- `offset`: the first result to be returned;
+
+- `limit`: the maximum number of results to be returned;
+
+- `filter`: an object to perform the match against, the properties of the 
+  documents must match exactly the given filter;
+
+- `orderBy`: orders the results by the given property, default is *id*.
+
+The response will be a JSON encoded object mirroring the parameters used for
+ the discovery plus some additional fields:
  
+- `domain`: the object domain;
+
+- `type`: the object type;
+
+- `count`: the total number of objects matching the filter;
+
+- `results`: an array of matching objects.
+
 Processor
 ---------
 
