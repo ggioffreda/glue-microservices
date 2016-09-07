@@ -10,9 +10,7 @@ const assert = require('assert'),
 var mockMBChannel = null,
     model = null,
     processor = null,
-    missingDependencies = false,
-    publishCall = null,
-    subscribeCall = null;
+    missingDependencies = false;
 
 describe('DataGathererProcessor', function () {
 
@@ -24,11 +22,7 @@ describe('DataGathererProcessor', function () {
                 return;
             }
 
-            mockMBChannel = sinon.stub({ publish: function () {
-                publishCall();
-            }, subscribe: function () {
-                subscribeCall();
-            } });
+            mockMBChannel = sinon.stub({ publish: function () { }, subscribe: function () { } });
             model = new m.DataGathererModel(dataLayer);
             processor = new p.DataGathererProcessor(model, mockMBChannel);
             processor.subscribeHandlers();
@@ -38,85 +32,69 @@ describe('DataGathererProcessor', function () {
     });
 
     describe('#subscribeHandlers()', function () {
-        it('should subscribe to the type creation requests topic', function () {
-            var args = mockMBChannel.subscribe.args.reduce(function (carry, item) {
+        var args;
+
+        beforeEach(function () {
+            args = mockMBChannel.subscribe.args.reduce(function (carry, item) {
                 carry.keys.push(item[0]);
                 carry.queues.push(item[2]);
                 return carry;
             }, { keys: [], queues: [] });
+        });
 
+        it('should subscribe to the type creation requests topic', function () {
             assert(args.keys.indexOf('*.*.*.create.data_gatherer') > -1);
             assert(args.queues.indexOf('data_gatherer_put_type') > -1);
         });
 
         it('should subscribe to the object post requests topic', function () {
-            var args = mockMBChannel.subscribe.args.reduce(function (carry, item) {
-                carry.keys.push(item[0]);
-                carry.queues.push(item[2]);
-                return carry;
-            }, { keys: [], queues: [] });
-
             assert(args.keys.indexOf('*.*.*.post.data_gatherer') > -1);
             assert(args.queues.indexOf('data_gatherer_post') > -1);
         });
 
         it('should subscribe to the object put requests topic', function () {
-            var args = mockMBChannel.subscribe.args.reduce(function (carry, item) {
-                carry.keys.push(item[0]);
-                carry.queues.push(item[2]);
-                return carry;
-            }, { keys: [], queues: [] });
-
             assert(args.keys.indexOf('*.*.*.*.put.data_gatherer') > -1);
             assert(args.queues.indexOf('data_gatherer_put') > -1);
         });
 
         it('should subscribe to the object patch requests topic', function () {
-            var args = mockMBChannel.subscribe.args.reduce(function (carry, item) {
-                carry.keys.push(item[0]);
-                carry.queues.push(item[2]);
-                return carry;
-            }, { keys: [], queues: [] });
-
             assert(args.keys.indexOf('*.*.*.*.patch.data_gatherer') > -1);
             assert(args.queues.indexOf('data_gatherer_patch') > -1);
         });
 
         it('should subscribe to the type creation requests topic', function () {
-            var args = mockMBChannel.subscribe.args.reduce(function (carry, item) {
-                carry.keys.push(item[0]);
-                carry.queues.push(item[2]);
-                return carry;
-            }, { keys: [], queues: [] });
-
             assert(args.keys.indexOf('*.*.*.*.delete.data_gatherer') > -1);
             assert(args.queues.indexOf('data_gatherer_delete') > -1);
         });
     });
 
     describe('#putTypeHandler()', function () {
-        it('should create a new type, and send a message to the exchange', function (done) {
-            if (missingDependencies) return this.skip();
-            mockMBChannel = sinon.stub({ publish: function () {
-                assert(mockMBChannel.publish.calledOnce);
-                assert(mockMBChannel.publish.calledWith(
+        var publishSpy;
+
+        function initialiseSpy(done) {
+            publishSpy = sinon.spy(function () {
+                assert(publishSpy.calledOnce);
+                assert(publishSpy.calledWith(
                     [ 'data_gatherer', testDatabase, testTable, 'type', 'created' ].join('.'),
                     new Buffer(JSON.stringify({ domain: testDatabase, type: testTable }))
                 ));
                 done();
-            }, subscribe: function () {
-                subscribeCall();
-            } });
+            });
+            if (missingDependencies) return this.skip();
+
+            mockMBChannel = { publish: publishSpy };
             model = new m.DataGathererModel(dataLayer);
             processor = new p.DataGathererProcessor(model, mockMBChannel);
-            processor.subscribeHandlers();
+        }
 
-            processor.putTypeHandler(['test', 'test', 'test', 'create', 'data_gatherer'], {});
-        });
-
-        it('should do nothing on PUT if the type exists, and send no message to the exchange', function (done) {
+        it('should create a new type, and send a message to the exchange', function (done) {
             if (missingDependencies) return this.skip();
-            done();
+
+            initialiseSpy(done);
+
+            dataLayer.tableDelete(testDatabase, testTable, function () {
+                processor.putTypeHandler(['test', testDatabase, testTable, 'create', 'data_gatherer'], {});
+            });
         });
     });
 
@@ -126,8 +104,9 @@ describe('DataGathererProcessor', function () {
             return done();
         }
 
-        // cleanup database
-        done();
+        dataLayer.tableDelete(testDatabase, testTable, function () {
+            done();
+        });
     });
 
 });
