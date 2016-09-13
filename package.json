@@ -20,12 +20,16 @@
   "dependencies": {
     "amqplib": "^0.4.2",
     "apn": "^1.7.7",
+    "async": "^2.0.1",
     "body-parser": "^1.15.2",
     "cluster-master": "^0.2.1",
     "express": "^4.14.0",
     "node-gcm": "^0.14.4",
     "rethinkdb": "^2.3.2",
-    "soap": "^0.16.0"
+    "scp2": "^0.5.0",
+    "soap": "^0.16.0",
+    "tmp": "0.0.28",
+    "uri-js": "^2.1.1"
   },
   "devDependencies": {
     "mocha": "^3.0.1",
