@@ -1,7 +1,5 @@
-exports.setUp = function (messageBus) {
-    const channel = messageBus.channel,
-        exchange = messageBus.exchange,
-        fs = require('fs'),
+exports.setUp = function (messageBusChannel, dataLayer) {
+    const fs = require('fs'),
         http = require('http'),
         https = require('https'),
         uri = require('uri-js'),
@@ -152,24 +150,19 @@ exports.setUp = function (messageBus) {
         }
     }
 
-    channel.assertQueue('default_remote_loader', { durable: true }, function(err, q) {
-        const queue = q.queue;
+    messageBusChannel.subscribe('*.*._remote_loader.*.inserted', function (routingKey, content, cb) {
+        const data = JSON.parse(content);
+        execute(data, function (err) {
+            if (err) {
+                messageBusChannel.publish(
+                    'processor.error.notice',
+                    new Buffer(JSON.stringify({ message: err.message })),
+                    { persistent: true, content_type: 'application/json' }
+                );
+            }
 
-        channel.bindQueue(queue, exchange, '*.*._remote_loader.*.inserted');
-
-        channel.consume(queue, function (msg) {
-            const data = JSON.parse(msg.content.toString());
-            execute(data, function (err) {
-                if (err) {
-                    channel.publish(
-                        exchange,
-                        'processor.error.notice',
-                        new Buffer(JSON.stringify({ message: err.message })),
-                        { persistent: true, content_type: 'application/json' }
-                    );
-                }
-                channel.ack(msg);
-            });
+            cb();
         });
-    });
+    }, 'processor_remote_loader');
+
 };

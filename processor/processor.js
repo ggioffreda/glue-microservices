@@ -1,29 +1,21 @@
 'use strict';
 
 (function () {
-    const amqp = require('amqplib/callback_api'),
-        exchange = 'message_bus',
-        fs = require('fs'),
-        r = require('rethinkdb');
+    const fs = require('fs');
 
-    amqp.connect('amqp://localhost', function(err, conn) {
-        if (err) process.exit(1);
+    fs.readdirSync('./processor/handlers').forEach(function (file) {
+        const dl = require('../lib/data-layer'),
+            dataLayer = new dl.DataLayer({}),
+            mb = require('../lib/message-bus'),
+            messageBus = new mb.MessageBus('amqp://localhost', 'message_bus');
 
-        conn.createChannel(function(err, ch) {
-            if (err) process.exit(1);
+        messageBus.connectModule(function (err, messageBusChannel) {
+            if (err) throw err;
 
-            ch.assertExchange(exchange, 'topic', { durable: true });
-            ch.prefetch(1);
-
-            r.connect({}, function(err, conn) {
-                if (err) process.exit(1);
-
-                const messageBus = { channel: ch, exchange: exchange };
-                const dataLayer = { r: r, connection: conn };
-
-                fs.readdirSync('./processor/handlers').forEach(function (file) {
-                    require('./handlers/' + file).setUp(messageBus, dataLayer);
-                });
+            messageBusChannel.getChannel().prefetch(1);
+            dataLayer.connectModule(function (err, dataLayer) {
+                if (err) throw err;
+                require('./handlers/' + file).setUp(messageBusChannel, dataLayer);
             });
         });
     });

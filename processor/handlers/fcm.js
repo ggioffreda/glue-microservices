@@ -1,8 +1,7 @@
 exports.setUp = function (messageBus, dataLayer) {
-    const channel = messageBus.channel,
-        exchange = messageBus.exchange,
-        r = dataLayer.r,
-        rconn = dataLayer.connection;
+    const channel = messageBus.getChannel(),
+        exchange = messageBus.getMessageBus().getExchange(),
+        d = dataLayer;
 
     channel.assertQueue('default_fcm', { durable: true }, function (err, q) {
         const queue = q.queue,
@@ -15,14 +14,14 @@ exports.setUp = function (messageBus, dataLayer) {
         // TODO: the following two methods are exactly the same in apn.js, time to share?
         function updateDocumentStatus(domain, type, id, status, failures) {
             const field = '_' + status + '_at';
-            r.db(domain).table(type).get(id).run(rconn, function (err, document) {
+            d.get(domain, type, id, function (err, document) {
                 if (err) return;
                 document._status = status;
                 document[field] = new Date();
                 if (failures) {
                     document._failures = failures;
                 }
-                r.db(domain).table(type).insert(document, { conflict: 'update' }).run(rconn);
+                d.insert(domain, type, document, { conflict: 'update' });
             });
         }
 
