@@ -1,5 +1,26 @@
 function DataDiscovererController(express, dataLayer) {
+    const d = dataLayer; // this is just to make it shorter
+
     this._router = null;
+
+    this.listTypesAction = function (req, res) {
+        const domain = req.params.objectDomain;
+
+        d.tableList(domain, function (err, tableList) {
+            if (err) return res.status(400).json({ message: err.message });
+
+            return res.status(200).json({
+                domain: domain,
+                count: tableList.length,
+                results: tableList.map(function (tableName) {
+                    return {
+                        type: tableName,
+                        properties: {}
+                    };
+                })
+            });
+        });
+    };
 
     this.findObjectsAction = function (req, res) {
         const domain = req.params.objectDomain,
@@ -9,8 +30,7 @@ function DataDiscovererController(express, dataLayer) {
             offset = Number(q.offset || b.offset || 0),
             limit = Number(q.limit || b.limit || 1000),
             orderBy = q.orderBy || b.orderBy || 'id',
-            filter = q.filter || b.filter || null,
-            d = dataLayer; // this is just to make it shorter
+            filter = q.filter || b.filter || null;
 
         function buildQuery() {
             return d.query().db(domain).table(type);
@@ -72,6 +92,7 @@ function DataDiscovererController(express, dataLayer) {
             this._router = express.Router();
             this._router.get('/:objectDomain/:objectType', this.findObjectsAction);
             this._router.post('/:objectDomain/:objectType', this.findObjectsAction);
+            this._router.get('/:objectDomain', this.listTypesAction);
         }
 
         return this._router;
