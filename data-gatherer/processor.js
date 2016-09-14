@@ -2,7 +2,7 @@ function DataGathererProcessor(model, messageBus) {
     this._model = model;
     this._channel = messageBus;
 
-    this.putTypeHandler = function (topicKeys, message) {
+    this.putTypeHandler = function (topicKeys, message, cb) {
         const domain = topicKeys[1],
             type = topicKeys[2];
 
@@ -10,6 +10,7 @@ function DataGathererProcessor(model, messageBus) {
             if (err) {
                 // send error to the message bus
             } else {
+                cb();
                 if ('created' === data.action) {
                     _publishMessage(domain, type, 'type.created', { domain: domain, type: type });
                 }
@@ -17,29 +18,30 @@ function DataGathererProcessor(model, messageBus) {
         });
     }.bind(this);
 
-    this.postObjectHandler = function (topicKeys, message) {
+    this.postObjectHandler = function (topicKeys, message, cb) {
         const domain = topicKeys[1],
             type = topicKeys[2];
 
-        _storeObject(domain, type, message, model);
+        _storeObject(domain, type, message, model, cb);
     }.bind(this);
 
-    this.putObjectHandler = function (topicKeys, message) {
+    this.putObjectHandler = function (topicKeys, message, cb) {
         const domain = topicKeys[1],
             type = topicKeys[2];
 
         message.id = topicKeys[3];
 
-        _storeObject(domain, type, message, model);
+        _storeObject(domain, type, message, model, cb);
     }.bind(this);
 
-    this.patchObjectHandler = function (topicKeys, message) {
+    this.patchObjectHandler = function (topicKeys, message, cb) {
         const domain = topicKeys[1],
             type = topicKeys[2],
             id = topicKeys[3],
             patch = message;
 
         if (!patch.items || !patch.items.length) {
+            cb();
             // send error to message bus
             return;
         }
@@ -48,12 +50,13 @@ function DataGathererProcessor(model, messageBus) {
             if (err) {
                 // send error to message bus
             } else {
+                cb();
                 _buildResponse(domain, type, patch, data);
             }
         });
     }.bind(this);
 
-    this.deleteObjectHandler = function (topicKeys, message) {
+    this.deleteObjectHandler = function (topicKeys, message, cb) {
         const domain = topicKeys[1],
             type = topicKeys[2],
             id = topicKeys[3];
@@ -62,6 +65,7 @@ function DataGathererProcessor(model, messageBus) {
             if (err) {
                 // send error to the message bus
             } else {
+                cb();
                 _buildResponse(domain, type, { id: id }, data);
             }
         });
@@ -76,8 +80,8 @@ function DataGathererProcessor(model, messageBus) {
     };
 
     var _filterKeyAndMessage = function (consumer) {
-        return function (key, rawMessage) {
-            return consumer(key.split('.'), JSON.parse(rawMessage.toString()));
+        return function (key, rawMessage, cb) {
+            return consumer(key.split('.'), JSON.parse(rawMessage.toString()), cb);
         };
     };
 
@@ -85,11 +89,12 @@ function DataGathererProcessor(model, messageBus) {
         this._channel.publish([ 'data_gatherer', domain, type, action ].join('.'), new Buffer(JSON.stringify(document)));
     }.bind(this);
 
-    var _storeObject = function (domain, type, document, model) {
+    var _storeObject = function (domain, type, document, model, cb) {
         model.storeObject(domain, type, document, function (err, data) {
             if (err) {
                 // send error to message bus
             } else {
+                cb();
                 _buildResponse(domain, type, document, data);
             }
         });

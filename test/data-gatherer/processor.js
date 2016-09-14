@@ -93,7 +93,9 @@ describe('DataGathererProcessor', function () {
             initialiseSpy(done);
 
             dataLayer.tableDelete(testDatabase, testTable, function () {
-                processor.putTypeHandler(['test', testDatabase, testTable, 'create', 'data_gatherer'], {});
+                processor.putTypeHandler(['test', testDatabase, testTable, 'create', 'data_gatherer'], {}, function () {
+                    // do nothing
+                });
             });
         });
     });
