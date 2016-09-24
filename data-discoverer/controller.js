@@ -1,23 +1,52 @@
 function DataDiscovererController(express, dataLayer) {
-    const d = dataLayer; // this is just to make it shorter
+    const async = require('async'),
+        d = dataLayer; // this is just to make it shorter
 
     this._router = null;
 
+    function wrapResponse(res) {
+        res.setHeader('Access-Control-Allow-Origin', '*');
+        return res;
+    }
+
     this.listTypesAction = function (req, res) {
         const domain = req.params.objectDomain;
+        res = wrapResponse(res);
 
         d.tableList(domain, function (err, tableList) {
             if (err) return res.status(400).json({ message: err.message });
 
-            return res.status(200).json({
-                domain: domain,
-                count: tableList.length,
-                results: tableList.map(function (tableName) {
-                    return {
-                        type: tableName,
-                        properties: {}
-                    };
-                })
+            const descriptors = {};
+            tableList.forEach(function (table) {
+                // TODO: this must be changed, it's not good to match like this
+                if ('__descriptor' === table) {
+                    return;
+                }
+
+                descriptors[table] = function (cb) {
+                    // TODO: this must be changed, it's not fetch the description directly
+                    d.get(domain, '__descriptor', 'type.' + table, function (err, descriptor) {
+                        descriptor = descriptor || {};
+                        descriptor.type = 'object';
+                        if (descriptor.id) {
+                            delete descriptor.id;
+                        }
+                        d.execute(d.query().db(domain).table(table).count(), function (err, count) {
+                            if (count) {
+                                descriptor.count = count;
+                            }
+                            cb(null, descriptor);
+                        });
+                    });
+                };
+            });
+
+            async.parallel(descriptors, function (err, results) {
+                return res.status(200).json({
+                    domain: domain,
+                    count: tableList.length,
+                    results: results
+                });
             });
         });
     };
@@ -26,11 +55,14 @@ function DataDiscovererController(express, dataLayer) {
         const domain = req.params.objectDomain,
             type = req.params.objectType,
             b = req.body || {},
-            q = req.query,
+            q = req.query || {},
             offset = Number(q.offset || b.offset || 0),
             limit = Number(q.limit || b.limit || 1000),
             orderBy = q.orderBy || b.orderBy || 'id',
+            order = q.order || b.order || 'asc',
             filter = q.filter || b.filter || null;
+
+        res = wrapResponse(res);
 
         function buildQuery() {
             return d.query().db(domain).table(type);
@@ -49,8 +81,9 @@ function DataDiscovererController(express, dataLayer) {
 
         var findObjects = buildCallback(function () {
             function findResults() {
+                const o = order === 'desc' ? d.query().desc(orderBy) : orderBy;
                 d.execute(
-                    buildFilterQuery().orderBy(orderBy).skip(offset).limit(limit),
+                    buildFilterQuery().orderBy(o).skip(offset).limit(limit),
                     buildCallback(function (results) {
                         d.execute(
                             buildFilterQuery().count(),
@@ -61,6 +94,7 @@ function DataDiscovererController(express, dataLayer) {
                                     offset: offset,
                                     limit: limit,
                                     orderBy: orderBy,
+                                    order: order,
                                     filter: filter,
                                     count: count,
                                     results: results
