@@ -52,8 +52,10 @@ exports.setUp = function (messageBusChannel, dataLayer) {
                     value.length : details.size;
                 break;
             case 'object':
-                details.size = 'undefined' === typeof details.size || details.size < Object.keys(value).length ?
-                    Object.keys(value).length : details.size;
+                if (null !== value) {
+                    details.size = 'undefined' === typeof details.size || details.size < Object.keys(value).length ?
+                        Object.keys(value).length : details.size;
+                }
                 break;
         }
         if ('array' === detected) {
@@ -70,9 +72,11 @@ exports.setUp = function (messageBusChannel, dataLayer) {
     function describe(object, descriptor, action) {
         descriptor = descriptor || {};
 
-        Object.keys(object).forEach(function (property) {
-            descriptor[property] = describeProperty(object[property], descriptor[property], action);
-        });
+        if (null !== object) {
+            Object.keys(object).forEach(function (property) {
+                descriptor[property] = describeProperty(object[property], descriptor[property], action);
+            });
+        }
 
         return descriptor;
     }
